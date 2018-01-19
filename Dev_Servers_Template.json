@@ -1,0 +1,1431 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "CloudFormation template to create development Servers",
+
+  "Parameters" : {
+
+    "CreateFullSizeVolumes" : {
+      "Description" : "Create full size volumes for each instance, this should be NO while testing templates or for temporary environments",
+      "Default" : "NO",
+      "Type" : "String",
+      "AllowedValues" : ["YES", "NO"],
+      "ConstraintDescription" : "must specify YES or NO."
+    },
+
+    "BaseAMI": {
+      "Description": "Base AMI ID",
+      "Type": "String",
+      "Default" : "ami-df9dfec9"
+    },
+
+    "KeyName": {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription" : "must be the name of an existing EC2 KeyPair."
+    },
+
+    "NetworkStackName": {
+      "Description": "Name of an active CloudFormation stack that contains the networking resources",
+      "Type": "String",
+      "MinLength" : 1,
+      "MaxLength" : 255,
+      "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
+      "Default" : "LLDDevNetwork"
+    },
+
+    "ManagementStackName": {
+      "Description": "Name of an active CloudFormation stack that contains the management and shared resources",
+      "Type": "String",
+      "MinLength" : 1,
+      "MaxLength" : 255,
+      "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
+      "Default" : "LLDManagement"
+    },
+
+    "LocalDomain": {
+      "Description": "local domain name within AWS",
+      "Type": "String",
+      "Default" : "LLAPP.LLD.aws"
+    },
+
+    "NATInstanceType" : {
+      "Description" : "NAT instance type",
+      "Type" : "String",
+      "Default" : "t1.micro",
+      "AllowedValues" : [ "t1.micro","m1.small","m1.medium","m1.large"],
+      "ConstraintDescription" : "must be a valid and allowed EC2 instance type."
+    },
+
+    "WebLogicInstanceType" : {
+      "Description" : "WebLogic App Server instance type",
+      "Type" : "String",
+      "Default" : "m4.2xlarge",
+      "AllowedValues" : [  "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "g2.2xlarge", "g2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "d2.xlarge", "d2.2xlarge", "d2.4xlarge", "d2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid and allowed EC2 instance type."
+    },
+
+    "SAPBOInstanceType" : {
+      "Description" : "SAP Business Objects - Reports - Server instance type",
+      "Type" : "String",
+      "Default" : "r3.xlarge",
+      "AllowedValues" : [  "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "g2.2xlarge", "g2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "d2.xlarge", "d2.2xlarge", "d2.4xlarge", "d2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid and allowed EC2 instance type."
+    },
+
+    "SAPETLInstanceType" : {
+      "Description" : "SAP ETL Server instance type",
+      "Type" : "String",
+      "Default" : "r3.xlarge",
+      "AllowedValues" : [  "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "g2.2xlarge", "g2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "d2.xlarge", "d2.2xlarge", "d2.4xlarge", "d2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid and allowed EC2 instance type."
+    },
+
+    "FTPInstanceType" : {
+      "Description" : "FTP Server instance type",
+      "Type" : "String",
+      "Default" : "t2.large",
+      "AllowedValues" : [  "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "g2.2xlarge", "g2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "d2.xlarge", "d2.2xlarge", "d2.4xlarge", "d2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid and allowed EC2 instance type."
+    },
+
+    "BatchInstanceType" : {
+      "Description" : "Java Batch Server instance type",
+      "Type" : "String",
+      "Default" : "c4.large",
+      "AllowedValues" : [  "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "g2.2xlarge", "g2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "d2.xlarge", "d2.2xlarge", "d2.4xlarge", "d2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid and allowed EC2 instance type."
+    },
+
+    "AppDatabaseInstanceType" : {
+      "Description" : "Application Database instance type",
+      "Type" : "String",
+      "Default" : "m4.2xlarge",
+      "AllowedValues" : [  "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "g2.2xlarge", "g2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "d2.xlarge", "d2.2xlarge", "d2.4xlarge", "d2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid and allowed EC2 instance type."
+    },
+
+    "AuditDatabaseInstanceType" : {
+      "Description" : "Audit Database instance type",
+      "Type" : "String",
+      "Default" : "m4.2xlarge",
+      "AllowedValues" : [  "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "g2.2xlarge", "g2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "d2.xlarge", "d2.2xlarge", "d2.4xlarge", "d2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid and allowed EC2 instance type."
+    },
+
+    "DatawareHouseInstanceType" : {
+      "Description" : "Data Warehouse Database instance type",
+      "Type" : "String",
+      "Default" : "m4.2xlarge",
+      "AllowedValues" : [  "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "g2.2xlarge", "g2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "d2.xlarge", "d2.2xlarge", "d2.4xlarge", "d2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid and allowed EC2 instance type."
+    }
+  },
+
+  "Conditions" : {
+    "FullSizeVolumes" : {"Fn::Equals" : [{"Ref" : "CreateFullSizeVolumes"}, "YES"]}
+  },
+
+  "Mappings" : {
+
+    "AWSInstanceType2Arch" : {
+      "t1.micro"    : { "Arch" : "PV64"   },
+      "t2.nano"     : { "Arch" : "HVM64"  },
+      "t2.micro"    : { "Arch" : "HVM64"  },
+      "t2.small"    : { "Arch" : "HVM64"  },
+      "t2.medium"   : { "Arch" : "HVM64"  },
+      "t2.large"    : { "Arch" : "HVM64"  },
+      "m1.small"    : { "Arch" : "PV64"   },
+      "m1.medium"   : { "Arch" : "PV64"   },
+      "m1.large"    : { "Arch" : "PV64"   },
+      "m1.xlarge"   : { "Arch" : "PV64"   },
+      "m2.xlarge"   : { "Arch" : "PV64"   },
+      "m2.2xlarge"  : { "Arch" : "PV64"   },
+      "m2.4xlarge"  : { "Arch" : "PV64"   },
+      "m3.medium"   : { "Arch" : "HVM64"  },
+      "m3.large"    : { "Arch" : "HVM64"  },
+      "m3.xlarge"   : { "Arch" : "HVM64"  },
+      "m3.2xlarge"  : { "Arch" : "HVM64"  },
+      "m4.large"    : { "Arch" : "HVM64"  },
+      "m4.xlarge"   : { "Arch" : "HVM64"  },
+      "m4.2xlarge"  : { "Arch" : "HVM64"  },
+      "m4.4xlarge"  : { "Arch" : "HVM64"  },
+      "m4.10xlarge" : { "Arch" : "HVM64"  },
+      "c1.medium"   : { "Arch" : "PV64"   },
+      "c1.xlarge"   : { "Arch" : "PV64"   },
+      "c3.large"    : { "Arch" : "HVM64"  },
+      "c3.xlarge"   : { "Arch" : "HVM64"  },
+      "c3.2xlarge"  : { "Arch" : "HVM64"  },
+      "c3.4xlarge"  : { "Arch" : "HVM64"  },
+      "c3.8xlarge"  : { "Arch" : "HVM64"  },
+      "c4.large"    : { "Arch" : "HVM64"  },
+      "c4.xlarge"   : { "Arch" : "HVM64"  },
+      "c4.2xlarge"  : { "Arch" : "HVM64"  },
+      "c4.4xlarge"  : { "Arch" : "HVM64"  },
+      "c4.8xlarge"  : { "Arch" : "HVM64"  },
+      "g2.2xlarge"  : { "Arch" : "HVMG2"  },
+      "g2.8xlarge"  : { "Arch" : "HVMG2"  },
+      "r3.large"    : { "Arch" : "HVM64"  },
+      "r3.xlarge"   : { "Arch" : "HVM64"  },
+      "r3.2xlarge"  : { "Arch" : "HVM64"  },
+      "r3.4xlarge"  : { "Arch" : "HVM64"  },
+      "r3.8xlarge"  : { "Arch" : "HVM64"  },
+      "i2.xlarge"   : { "Arch" : "HVM64"  },
+      "i2.2xlarge"  : { "Arch" : "HVM64"  },
+      "i2.4xlarge"  : { "Arch" : "HVM64"  },
+      "i2.8xlarge"  : { "Arch" : "HVM64"  },
+      "d2.xlarge"   : { "Arch" : "HVM64"  },
+      "d2.2xlarge"  : { "Arch" : "HVM64"  },
+      "d2.4xlarge"  : { "Arch" : "HVM64"  },
+      "d2.8xlarge"  : { "Arch" : "HVM64"  },
+      "hi1.4xlarge" : { "Arch" : "HVM64"  },
+      "hs1.8xlarge" : { "Arch" : "HVM64"  },
+      "cr1.8xlarge" : { "Arch" : "HVM64"  },
+      "cc2.8xlarge" : { "Arch" : "HVM64"  }
+    },
+
+    "AWSRegionArch2AMI" : {
+      "us-east-1"      : { "PV64" : "ami-50842d38", "HVM64" : "ami-2a73fe3c", "HVMG2" : "ami-3a329952"  },
+      "us-west-2"      : { "PV64" : "ami-af86c69f", "HVM64" : "ami-4dbf9e7d", "HVMG2" : "ami-47296a77"  },
+      "us-west-1"      : { "PV64" : "ami-c7a8a182", "HVM64" : "ami-a540a5e1", "HVMG2" : "ami-331b1376"  }
+    },
+
+    "AWSNATAMI" : {
+      "us-east-1"      : { "AMI" : "ami-c6699baf" },
+      "us-west-2"      : { "AMI" : "ami-52ff7262" },
+      "us-west-1"      : { "AMI" : "ami-3bcc9e7e" }
+    },
+
+    "CIDRBlocks" : {
+      "LLDAWS"     		    : { "CIDR" : "172.27.0.0/16" },
+      "LLDProdEnv"			: { "CIDR" : "172.27.0.0/20" },
+	  "LLDProdWLSubnetZA"	: { "CIDR" : "172.27.0.0/24" },
+	  "LLDProdCoreSubnetZA"	: { "CIDR" : "172.27.1.0/24" },
+	  "LLDProdDBSubnetZA"	: { "CIDR" : "172.27.2.0/24" },
+	  "LLDProdDMZSubnetZA"	: { "CIDR" : "172.27.3.0/24" },
+	  "LLDProdWLSubnetZB"	: { "CIDR" : "172.27.4.0/24" },
+	  "LLDProdCoreSubnetZB"	: { "CIDR" : "172.27.5.0/24" },
+	  "LLDProdDBSubnetZB"	: { "CIDR" : "172.27.6.0/24" },
+	  "LLDProdDMZSubnetZB"	: { "CIDR" : "172.27.7.0/24" },
+	  "LLDUATEnv"			: { "CIDR" : "172.27.16.0/20" },
+	  "LLDUATWLSubnetZA"	: { "CIDR" : "172.27.16.0/24" },
+	  "LLDUATCoreSubnetZA"	: { "CIDR" : "172.27.17.0/24" },
+	  "LLDUATDBSubnetZA"	: { "CIDR" : "172.27.18.0/24" },
+	  "LLDUATDMZSubnetZA"	: { "CIDR" : "172.27.19.0/24" },
+	  "LLDUATWLSubnetZB"	: { "CIDR" : "172.27.20.0/24" },
+	  "LLDUATCoreSubnetZB"	: { "CIDR" : "172.27.21.0/24" },
+	  "LLDUATDMZSubnetZB"	: { "CIDR" : "172.27.22.0/24" },
+	  "LLDDevEnv"     		: { "CIDR" : "172.27.32.0/20" },
+	  "LLDDevWLSubnet"		: { "CIDR" : "172.27.32.0/24" },
+	  "LLDDevCoreSubnet"	: { "CIDR" : "172.27.33.0/24" },
+	  "LLDDevDBSubnet"		: { "CIDR" : "172.27.34.0/24" },
+	  "LLDDevDMZSubnet"     : { "CIDR" : "172.27.35.0/24" },
+	  "LLDSTEnv"     		: { "CIDR" : "172.27.48.0/20" },
+	  "LLDSTWLSubnet"		: { "CIDR" : "172.27.48.0/24" },
+	  "LLDSTCoreSubnet"		: { "CIDR" : "172.27.49.0/24" },
+	  "LLDSTDBSubnet"		: { "CIDR" : "172.27.50.0/24" },
+	  "LLDSTDMZSubnet"	    : { "CIDR" : "172.27.51.0/24" },
+	  "LLDA1MEnv"			: { "CIDR" : "172.27.64.0/24" },
+	  "LLDA1MCoreSubnetZA"	: { "CIDR" : "172.27.64.0/26" },
+	  "LLDA1MDMZSubnetZA"	: { "CIDR" : "172.27.64.64/26" },
+	  "LLDA1MCoreSubnetZB"	: { "CIDR" : "172.27.64.128/26" },
+	  "LLDA1MDMZSubnetZB"	: { "CIDR" : "172.27.64.192/26" },
+	  "LLDA2MEnv"			: { "CIDR" : "172.27.65.0/24" },
+	  "LLDA2MCoreSubnetZA"	: { "CIDR" : "172.27.65.0/26" },
+	  "LLDA2MDMZSubnetZA"	: { "CIDR" : "172.27.65.64/26" },
+	  "LLDA2MCoreSubnetZB"	: { "CIDR" : "172.27.65.128/26" },
+	  "LLDA2MDMZSubnetZB"	: { "CIDR" : "172.27.65.192/26" }
+	}
+
+  },
+
+  "Resources" : {
+
+    "FilesS3Bucket" : {
+      "Metadata" : {
+        "Comment1" : "//------------------------------S3 bucket asctins as File Server---------------------------------"
+      },
+      "Type" : "AWS::S3::Bucket",
+      "Properties" : {
+        "AccessControl" : "AuthenticatedRead",
+        "BucketName" : {"Fn::Join" : [ "", ["devbucket.",{"Ref" : "LocalDomain"}] ]},
+        "Tags" : [ {"Key" : "Environment", "Value" : { "Ref" : "AWS::StackName"} },
+        		   {"Key":"Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_FilesS3Bucket"]]}}
+
+        ]
+      }
+    },
+
+    "WebLogicInstancesRole" : {
+     "Metadata" : {
+        "Comment1" : "//------------------------------WebLogic Server---------------------------------"
+      },
+      "Type"  : "AWS::IAM::Role",
+      "Properties" : {
+          "AssumeRolePolicyDocument" : {
+              "Statement" : [ {
+                  "Effect" : "Allow",
+                  "Principal" : {
+                      "Service" : [ "ec2.amazonaws.com" ]
+                  },
+                  "Action" : [ "sts:AssumeRole" ]
+              } ]
+          },
+          "Policies": [ {
+               "PolicyName": "LLDEC2CloudWatch",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [ {
+                     "Effect": "Allow",
+                     "Action": ["cloudwatch:PutMetricData","cloudwatch:GetMetricStatistics","cloudwatch:ListMetrics","ec2:DescribeTags","ec2:Describe*"],
+                     "Resource": "*"
+                  } ]
+               }
+            }
+          ],
+          "ManagedPolicyArns" : ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM",
+                                "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
+          "Path" : "/service-role/"
+      }
+    },
+
+    "WebLogicInstanceProfile" : {
+      "Type" : "AWS::IAM::InstanceProfile",
+      "Properties" : {
+        "Path" : "/",
+        "Roles" : [ { "Ref" : "WebLogicInstancesRole" } ]
+      }
+    },
+
+    "WebLogicSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for WebLogic instances",
+        "VpcId" : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-VPCID" } },
+        "SecurityGroupIngress" : [
+          						   { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+          						   { "IpProtocol" : "tcp", "FromPort" : "443",  "ToPort" : "443",  "CidrIp" : "0.0.0.0/0" } ,
+          						   { "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" } ,
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+
+        ],
+        "SecurityGroupEgress" : [
+           						   { "IpProtocol" : "tcp", "FromPort" : "0",  "ToPort" : "65535",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+        ],
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "WBAP" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+        		   {"Key" :"Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_WebLogicSecurityGroup"]]}}
+
+        ]
+      }
+    },
+
+    "WebLogicInterface" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+        "SubnetId" : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-DevWLSubnetID" } },
+        "GroupSet" : [{ "Ref" : "WebLogicSecurityGroup" }],
+        "SecondaryPrivateIpAddressCount": 0,
+        "Tags" 	   : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "WBAP" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+        		   {"Key":"Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_WebLogicInterface"]]}}
+
+        ]
+      }
+    },
+
+    "WebLogicServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : { "Ref" : "BaseAMI" },
+        "InstanceType" : { "Ref" : "WebLogicInstanceType" },
+        "KeyName" : { "Ref" : "KeyName" },
+        "IamInstanceProfile" : { "Ref" : "WebLogicInstanceProfile" },
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "WBAP" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+                   {"Key" : "Name", "Value" : "AWS-LLAPP-LVDA-WBAP01"},
+                   {"Key" : "scheduler:ebs-snapshot", "Value" : "none" }
+        ],
+        "NetworkInterfaces" : [{
+          "DeviceIndex"              : "0",
+          "NetworkInterfaceId" : {"Ref" : "WebLogicInterface"}
+        }],
+		 "BlockDeviceMappings" : [
+		   {
+			  "DeviceName" : "/dev/sda1",
+			  "Ebs" : {
+                  "VolumeSize" : "10",
+                  "VolumeType" : "gp2",
+                  "DeleteOnTermination" : true
+              }
+		   },
+           {
+              "DeviceName" : "/dev/sdb",
+              "Ebs" : {
+                  "VolumeSize" : {"Fn::If" : ["FullSizeVolumes","490","10"]},
+                  "VolumeType" : "gp2",
+                  "Encrypted" : true,
+                  "DeleteOnTermination" : true
+              }
+           }
+		],
+		 "UserData" : {"Fn::Base64" : { "Fn::Join" : ["",[
+
+				"#!/bin/bash","\n",
+                "hostnamectl set-hostname AWS-LLAPP-LVDA-WBAP01 --static","\n",
+                "systemctl start amazon-ssm-agent","\n",
+                "systemctl enable amazon-ssm-agent.service","\n"
+
+			]]}
+		}
+      }
+    },
+
+    "DevWLAppLoadBalancer" : {
+     "Metadata" : {
+        "Comment1" : "//------------------------------WebLogic Server Load Balancer---------------------------------"
+      },
+      "Type" : "AWS::ElasticLoadBalancingV2::LoadBalancer",
+      "Properties" : {
+        "Scheme" : "internal",
+        "Subnets" : [ { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-DevWLSubnetID" } },
+                    { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-DevWLSubnetZBID" } }
+        ],
+        "SecurityGroups" : [{ "Ref" : "WebLogicSecurityGroup" }],
+         "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "WBAP" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+                   {"Key" : "Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_DevWLAppLoadBalancer"]]}}
+         ]
+      }
+    },
+
+    "DevWLTargetGroup" : {
+      "Type" : "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "Properties" : {
+        "HealthCheckIntervalSeconds" : 30,
+        "UnhealthyThresholdCount" : 2,
+        "HealthCheckTimeoutSeconds": 25,
+        "HealthyThresholdCount" : 2,
+        "HealthCheckPath" : "/welcome",
+        "HealthCheckPort" : 8001,
+        "Name" : "WLTargetGroup",
+        "Port" : 80,
+        "Protocol" : "HTTP",
+        "Targets": [
+          { "Id": {"Ref" : "WebLogicServer"}, "Port": 8001 },
+          { "Id": {"Ref" : "WebLogicServer"}, "Port": 9001 }
+        ],
+        "VpcId" : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-VPCID" } },
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "WBAP" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+                   {"Key" : "Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_DevWLTargetGroup"]]}}
+         ]
+      }
+    },
+
+    "ALBListener80" : {
+      "Type" : "AWS::ElasticLoadBalancingV2::Listener",
+      "Properties" : {
+        "DefaultActions" : [{
+          "Type" : "forward",
+          "TargetGroupArn" : { "Ref" : "DevWLTargetGroup" }
+        }],
+        "LoadBalancerArn" : { "Ref" : "DevWLAppLoadBalancer" },
+        "Port" : "80",
+        "Protocol" : "HTTP"
+      }
+    },
+
+    "SAPBOInstancesRole" : {
+     "Metadata" : {
+        "Comment1" : "//------------------------------SAP Business Objects Server---------------------------------"
+      },
+      "Type"  : "AWS::IAM::Role",
+      "Properties" : {
+          "AssumeRolePolicyDocument" : {
+              "Statement" : [ {
+                  "Effect" : "Allow",
+                  "Principal" : {
+                      "Service" : [ "ec2.amazonaws.com" ]
+                  },
+                  "Action" : [ "sts:AssumeRole" ]
+              } ]
+          },
+          "Policies": [ {
+               "PolicyName": "LLDEC2CloudWatch",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [ {
+                     "Effect": "Allow",
+                     "Action": ["cloudwatch:PutMetricData","cloudwatch:GetMetricStatistics","cloudwatch:ListMetrics","ec2:DescribeTags"],
+                     "Resource": "*"
+                  } ]
+               }
+               }
+          ],
+          "ManagedPolicyArns" : ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM",
+                                "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
+          "Path" : "/service-role/"
+      }
+    },
+
+    "SAPBOInstanceProfile" : {
+      "Type" : "AWS::IAM::InstanceProfile",
+      "Properties" : {
+        "Path" : "/",
+        "Roles" : [ { "Ref" : "SAPBOInstancesRole" } ]
+      }
+    },
+
+    "SAPBOSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for SAP Business Objects instances",
+        "VpcId" : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-VPCID" } },
+        "SecurityGroupIngress" : [
+          						   { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+          						   { "IpProtocol" : "tcp", "FromPort" : "443",  "ToPort" : "443",  "CidrIp" : "0.0.0.0/0" } ,
+          						   { "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" } ,
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+
+        ],
+        "SecurityGroupEgress" : [
+           						   { "IpProtocol" : "tcp", "FromPort" : "0",  "ToPort" : "65535",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+        ],
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "BOBJ" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+        		   {"Key":"Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_SAPBOSecurityGroup"]]}}
+
+        ]
+      }
+    },
+
+    "SAPBOServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : { "Ref" : "BaseAMI" },
+        "InstanceType" : { "Ref" : "SAPBOInstanceType" },
+        "KeyName" : { "Ref" : "KeyName" },
+        "IamInstanceProfile" : { "Ref" : "SAPBOInstanceProfile" },
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "BOBJ" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+                   {"Key" : "Name", "Value" : "AWS-LLAPP-LVDA-BOBJ01"},
+                   {"Key" : "scheduler:ebs-snapshot", "Value" : "none" }
+        ],
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "SAPBOSecurityGroup" }],
+          "AssociatePublicIpAddress" : "false",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-DevCoreSubnetID" } }
+        }],
+		 "BlockDeviceMappings" : [
+		   {
+			  "DeviceName" : "/dev/sda1",
+			  "Ebs" : {
+                  "VolumeSize" : "10",
+                  "VolumeType" : "gp2",
+                  "DeleteOnTermination" : true
+              }
+		   },
+           {
+              "DeviceName" : "/dev/sdb",
+              "Ebs" : {
+                  "VolumeSize" : {"Fn::If" : ["FullSizeVolumes","490","10"]},
+                  "VolumeType" : "gp2",
+                  "Encrypted" : true,
+                  "DeleteOnTermination" : true
+              }
+           }
+		],
+		  "UserData" : {"Fn::Base64" : { "Fn::Join" : ["",[
+
+				"#!/bin/bash","\n",
+                "hostnamectl set-hostname AWS-LLAPP-LVDA-BOBJ01 --static","\n",
+                "systemctl start amazon-ssm-agent","\n",
+                "systemctl enable amazon-ssm-agent.service"
+
+			]]}
+		 }
+      }
+    },
+
+    "SAPETLInstancesRole" : {
+     "Metadata" : {
+        "Comment1" : "//------------------------------SAP ETL Server---------------------------------"
+      },
+      "Type"  : "AWS::IAM::Role",
+      "Properties" : {
+          "AssumeRolePolicyDocument" : {
+              "Statement" : [ {
+                  "Effect" : "Allow",
+                  "Principal" : {
+                      "Service" : [ "ec2.amazonaws.com" ]
+                  },
+                  "Action" : [ "sts:AssumeRole" ]
+              } ]
+          },
+          "Policies": [ {
+               "PolicyName": "LLDEC2CloudWatch",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [ {
+                     "Effect": "Allow",
+                     "Action": ["cloudwatch:PutMetricData","cloudwatch:GetMetricStatistics","cloudwatch:ListMetrics","ec2:DescribeTags"],
+                     "Resource": "*"
+                  } ]
+               }
+               }
+          ],
+          "ManagedPolicyArns" : ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM",
+                                "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
+          "Path" : "/service-role/"
+      }
+    },
+
+    "SAPETLInstanceProfile" : {
+      "Type" : "AWS::IAM::InstanceProfile",
+      "Properties" : {
+        "Path" : "/",
+        "Roles" : [ { "Ref" : "SAPETLInstancesRole" } ]
+      }
+    },
+
+    "SAPETLSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for SAP ETL instances",
+        "VpcId" : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-VPCID" } },
+        "SecurityGroupIngress" : [
+          						   { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+          						   { "IpProtocol" : "tcp", "FromPort" : "443",  "ToPort" : "443",  "CidrIp" : "0.0.0.0/0" } ,
+          						   { "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" } ,
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+
+        ],
+        "SecurityGroupEgress" : [
+           						   { "IpProtocol" : "tcp", "FromPort" : "0",  "ToPort" : "65535",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+        ],
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "BODS" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+        		   {"Key":"Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_SAPETLSecurityGroup"]]}}
+
+        ]
+      }
+    },
+
+    "SAPETLServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : { "Ref" : "BaseAMI" },
+        "InstanceType" : { "Ref" : "SAPETLInstanceType" },
+        "KeyName" : { "Ref" : "KeyName" },
+        "IamInstanceProfile" : { "Ref" : "SAPETLInstanceProfile" },
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "BODS" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+                   {"Key" : "Name", "Value" : "AWS-LLAPP-LVDA-BODS01"},
+                   {"Key" : "scheduler:ebs-snapshot", "Value" : "none" }
+        ],
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "SAPETLSecurityGroup" }],
+          "AssociatePublicIpAddress" : "false",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-DevCoreSubnetID" } }
+        }],
+		 "BlockDeviceMappings" : [
+		   {
+			  "DeviceName" : "/dev/sda1",
+			  "Ebs" : {
+                  "VolumeSize" : "10",
+                  "VolumeType" : "gp2",
+                  "DeleteOnTermination" : true
+              }
+		   },
+           {
+              "DeviceName" : "/dev/sdb",
+              "Ebs" : {
+                  "VolumeSize" : {"Fn::If" : ["FullSizeVolumes","990","10"]},
+                  "VolumeType" : "gp2",
+                  "Encrypted" : true,
+                  "DeleteOnTermination" : true
+              }
+           }
+		],
+		"UserData" : {"Fn::Base64" : { "Fn::Join" : ["",[
+
+				"#!/bin/bash","\n",
+                "systemctl start amazon-ssm-agent","\n",
+                "hostnamectl set-hostname AWS-LLAPP-LVDA-BODS01 --static","\n",
+                "systemctl enable amazon-ssm-agent.service"
+
+			]]}
+		}
+      }
+    },
+
+    "FTPInstancesRole" : {
+     "Metadata" : {
+        "Comment1" : "//------------------------------FTP Server---------------------------------"
+      },
+      "Type"  : "AWS::IAM::Role",
+      "Properties" : {
+          "AssumeRolePolicyDocument" : {
+              "Statement" : [ {
+                  "Effect" : "Allow",
+                  "Principal" : {
+                      "Service" : [ "ec2.amazonaws.com" ]
+                  },
+                  "Action" : [ "sts:AssumeRole" ]
+              } ]
+          },
+          "Policies": [ {
+               "PolicyName": "LLDEC2CloudWatch",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [ {
+                     "Effect": "Allow",
+                     "Action": ["cloudwatch:PutMetricData","cloudwatch:GetMetricStatistics","cloudwatch:ListMetrics","ec2:DescribeTags"],
+                     "Resource": "*"
+                  } ]
+               }
+               }
+          ],
+          "ManagedPolicyArns" : ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM",
+                                "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
+          "Path" : "/service-role/"
+      }
+    },
+
+    "FTPInstanceProfile" : {
+      "Type" : "AWS::IAM::InstanceProfile",
+      "Properties" : {
+        "Path" : "/",
+        "Roles" : [ { "Ref" : "FTPInstancesRole" } ]
+      }
+    },
+
+    "FTPSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for FTP instances",
+        "VpcId" : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-VPCID" } },
+        "SecurityGroupIngress" : [
+          						   { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+          						   { "IpProtocol" : "tcp", "FromPort" : "20",  "ToPort" : "20",  "CidrIp" : "0.0.0.0/0" } ,
+          						   { "IpProtocol" : "tcp", "FromPort" : "21",  "ToPort" : "21",  "CidrIp" : "0.0.0.0/0" } ,
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+
+        ],
+        "SecurityGroupEgress" : [
+           						   { "IpProtocol" : "tcp", "FromPort" : "0",  "ToPort" : "65535",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+        ],
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "SFTP" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+        		   {"Key" : "Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_FTPSecurityGroup"]]}}
+
+        ]
+      }
+    },
+
+    "FTPServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : { "Ref" : "BaseAMI" },
+        "InstanceType" : { "Ref" : "FTPInstanceType" },
+        "KeyName" : { "Ref" : "KeyName" },
+        "IamInstanceProfile" : { "Ref" : "FTPInstanceProfile" },
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "SFTP" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+                   {"Key" : "Name", "Value" : "AWS-LLAPP-LVDA-SFTP01"},
+                   {"Key" : "scheduler:ebs-snapshot", "Value" : "none" }
+        ],
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "FTPSecurityGroup" }],
+          "AssociatePublicIpAddress" : "false",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-DevCoreSubnetID" } }
+        }],
+		"BlockDeviceMappings" : [
+		   {
+			  "DeviceName" : "/dev/sda1",
+			  "Ebs" : {
+                  "VolumeSize" : "10",
+                  "VolumeType" : "gp2",
+                  "DeleteOnTermination" : true
+              }
+		   },
+           {
+              "DeviceName" : "/dev/sdb",
+              "Ebs" : {
+                  "VolumeSize" : {"Fn::If" : ["FullSizeVolumes","1990","10"]},
+                  "VolumeType" : "gp2",
+                  "Encrypted" : true,
+                  "DeleteOnTermination" : true
+              }
+           }
+		],
+		"UserData" : {"Fn::Base64" : { "Fn::Join" : ["",[
+
+				"#!/bin/bash","\n",
+                "hostnamectl set-hostname AWS-LLAPP-LVDA-SFTP01 --static","\n",
+                "systemctl start amazon-ssm-agent","\n",
+                "systemctl enable amazon-ssm-agent.service"
+
+			]]}
+		}
+      }
+    },
+
+    "BatchInstancesRole" : {
+     "Metadata" : {
+        "Comment1" : "//------------------------------Java Batch Server---------------------------------"
+      },
+      "Type"  : "AWS::IAM::Role",
+      "Properties" : {
+          "AssumeRolePolicyDocument" : {
+              "Statement" : [ {
+                  "Effect" : "Allow",
+                  "Principal" : {
+                      "Service" : [ "ec2.amazonaws.com" ]
+                  },
+                  "Action" : [ "sts:AssumeRole" ]
+              } ]
+          },
+          "Policies": [ {
+               "PolicyName": "LLDEC2CloudWatch",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [ {
+                     "Effect": "Allow",
+                     "Action": ["cloudwatch:PutMetricData","cloudwatch:GetMetricStatistics","cloudwatch:ListMetrics","ec2:DescribeTags"],
+                     "Resource": "*"
+                  } ]
+               }
+               }
+          ],
+          "ManagedPolicyArns" : ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM",
+                                "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
+          "Path" : "/service-role/"
+      }
+    },
+
+    "BatchInstanceProfile" : {
+      "Type" : "AWS::IAM::InstanceProfile",
+      "Properties" : {
+        "Path" : "/",
+        "Roles" : [ { "Ref" : "BatchInstancesRole" } ]
+      }
+    },
+
+    "BatchSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for java batch instances",
+        "VpcId" : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-VPCID" } },
+        "SecurityGroupIngress" : [
+          						   { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+          						   { "IpProtocol" : "tcp", "FromPort" : "443",  "ToPort" : "443",  "CidrIp" : "0.0.0.0/0" } ,
+          						   { "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" } ,
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+
+        ],
+        "SecurityGroupEgress" : [
+           						   { "IpProtocol" : "tcp", "FromPort" : "0",  "ToPort" : "65535",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+        ],
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "JABA" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+        		   {"Key" : "Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_BatchSecurityGroup"]]}}
+
+        ]
+      }
+    },
+
+    "BatchServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : { "Ref" : "BaseAMI" },
+        "InstanceType" : { "Ref" : "BatchInstanceType" },
+        "KeyName" : { "Ref" : "KeyName" },
+        "IamInstanceProfile" : { "Ref" : "BatchInstanceProfile" },
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "JABA" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+                   {"Key" : "Name", "Value" : "AWS-LLAPP-LVDA-JABA01"},
+                   {"Key" : "scheduler:ebs-snapshot", "Value" : "none" }
+        ],
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "BatchSecurityGroup" }],
+          "AssociatePublicIpAddress" : "false",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-DevCoreSubnetID" } }
+        }],
+		"BlockDeviceMappings" : [
+		   {
+			  "DeviceName" : "/dev/sda1",
+			  "Ebs" : {
+                  "VolumeSize" : "10",
+                  "VolumeType" : "gp2",
+                  "DeleteOnTermination" : true
+              }
+		   },
+           {
+              "DeviceName" : "/dev/sdb",
+              "Ebs" : {
+                  "VolumeSize" : {"Fn::If" : ["FullSizeVolumes","190","10"]},
+                  "VolumeType" : "gp2",
+                  "Encrypted" : true,
+                  "DeleteOnTermination" : true
+              }
+           }
+		],
+		"UserData" : {"Fn::Base64" : { "Fn::Join" : ["",[
+
+				"#!/bin/bash","\n",
+                "hostnamectl set-hostname AWS-LLAPP-LVDA-JABA01 --static","\n",
+                "systemctl start amazon-ssm-agent","\n",
+                "systemctl enable amazon-ssm-agent.service"
+			]]}
+		}
+      }
+    },
+
+    "AppDatabaseInstancesRole" : {
+     "Metadata" : {
+        "Comment1" : "//------------------------------Application Database Server---------------------------------"
+      },
+      "Type"  : "AWS::IAM::Role",
+      "Properties" : {
+          "AssumeRolePolicyDocument" : {
+              "Statement" : [ {
+                  "Effect" : "Allow",
+                  "Principal" : {
+                      "Service" : [ "ec2.amazonaws.com" ]
+                  },
+                  "Action" : [ "sts:AssumeRole" ]
+              } ]
+          },
+          "Policies": [ {
+               "PolicyName": "LLDEC2CloudWatch",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [ {
+                     "Effect": "Allow",
+                     "Action": ["cloudwatch:PutMetricData","cloudwatch:GetMetricStatistics","cloudwatch:ListMetrics","ec2:DescribeTags"],
+                     "Resource": "*"
+                  } ]
+               }
+               }
+          ],
+          "ManagedPolicyArns" : ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM",
+                                "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
+          "Path" : "/service-role/"
+      }
+    },
+
+    "AppDatabaseInstanceProfile" : {
+      "Type" : "AWS::IAM::InstanceProfile",
+      "Properties" : {
+        "Path" : "/",
+        "Roles" : [ { "Ref" : "AppDatabaseInstancesRole" } ]
+      }
+    },
+
+    "AppDatabaseSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for application database instances",
+        "VpcId" : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-VPCID" } },
+        "SecurityGroupIngress" : [
+          						   { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+          						   { "IpProtocol" : "tcp", "FromPort" : "443",  "ToPort" : "443",  "CidrIp" : "0.0.0.0/0" } ,
+          						   { "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" } ,
+                                   { "IpProtocol" : "tcp", "FromPort" : "50000",  "ToPort" : "50000",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+
+        ],
+        "SecurityGroupEgress" : [
+           						   { "IpProtocol" : "tcp", "FromPort" : "0",  "ToPort" : "65535",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+        ],
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "OLTP" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+        		   {"Key":"Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_AppDatabaseSecurityGroup"]]}}
+
+        ]
+      }
+    },
+
+    "AppDatabaseServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : { "Ref" : "BaseAMI" },
+        "InstanceType" : { "Ref" : "AppDatabaseInstanceType" },
+        "KeyName" : { "Ref" : "KeyName" },
+        "IamInstanceProfile" : { "Ref" : "AppDatabaseInstanceProfile" },
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "OLTP" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+                   {"Key" : "Name", "Value" : "AWS-LLAPP-LVDDB-OLTP01"},
+                   {"Key" : "scheduler:ebs-snapshot", "Value" : "none" }
+        ],
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "AppDatabaseSecurityGroup" }],
+          "AssociatePublicIpAddress" : "false",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-DevDBSubnetID" } }
+        }],
+		"BlockDeviceMappings" : [
+		   {
+			  "DeviceName" : "/dev/sda1",
+			  "Ebs" : {
+                  "VolumeSize" : "10",
+                  "VolumeType" : "gp2",
+                  "DeleteOnTermination" : true
+              }
+		   },
+           {
+              "DeviceName" : "/dev/sdb",
+              "Ebs" : {
+                  "VolumeSize" : {"Fn::If" : ["FullSizeVolumes","12000","50"]},
+                  "VolumeType" : "gp2",
+                  "Encrypted" : true,
+                  "DeleteOnTermination" : true
+              }
+           }
+		],
+		"UserData" : {"Fn::Base64" : { "Fn::Join" : ["",[
+
+				"#!/bin/bash","\n",
+                "hostnamectl set-hostname AWS-LLAPP-LVDDB-OLTP01 --static","\n",
+                "systemctl start amazon-ssm-agent","\n",
+                "systemctl enable amazon-ssm-agent.service"
+
+			]]}
+		}
+      }
+    },
+
+    "AuditDatabaseInstancesRole" : {
+     "Metadata" : {
+        "Comment1" : "//------------------------------Audit Database Server---------------------------------"
+      },
+      "Type"  : "AWS::IAM::Role",
+      "Properties" : {
+          "AssumeRolePolicyDocument" : {
+              "Statement" : [ {
+                  "Effect" : "Allow",
+                  "Principal" : {
+                      "Service" : [ "ec2.amazonaws.com" ]
+                  },
+                  "Action" : [ "sts:AssumeRole" ]
+              } ]
+          },
+          "Policies": [ {
+               "PolicyName": "LLDEC2CloudWatch",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [ {
+                     "Effect": "Allow",
+                     "Action": ["cloudwatch:PutMetricData","cloudwatch:GetMetricStatistics","cloudwatch:ListMetrics","ec2:DescribeTags"],
+                     "Resource": "*"
+                  } ]
+               }
+               }
+          ],
+          "ManagedPolicyArns" : ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM",
+                                "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
+          "Path" : "/service-role/"
+      }
+    },
+
+    "AuditDatabaseInstanceProfile" : {
+      "Type" : "AWS::IAM::InstanceProfile",
+      "Properties" : {
+        "Path" : "/",
+        "Roles" : [ { "Ref" : "AuditDatabaseInstancesRole" } ]
+      }
+    },
+
+    "AuditDatabaseSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for audit database instances",
+        "VpcId" : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-VPCID" } },
+        "SecurityGroupIngress" : [
+          						   { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+          						   { "IpProtocol" : "tcp", "FromPort" : "443",  "ToPort" : "443",  "CidrIp" : "0.0.0.0/0" } ,
+          						   { "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" } ,
+                                   { "IpProtocol" : "tcp", "FromPort" : "50000",  "ToPort" : "50000",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+
+        ],
+        "SecurityGroupEgress" : [
+           						   { "IpProtocol" : "tcp", "FromPort" : "0",  "ToPort" : "65535",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+        ],
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "AUIM" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+        		   {"Key" : "Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_AuditDatabaseSecurityGroup"]]}}
+
+        ]
+      }
+    },
+
+    "AuditDatabaseServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : { "Ref" : "BaseAMI" },
+        "InstanceType" : { "Ref" : "AuditDatabaseInstanceType" },
+        "KeyName" : { "Ref" : "KeyName" },
+        "IamInstanceProfile" : { "Ref" : "AuditDatabaseInstanceProfile" },
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "AUIM" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+                   {"Key" : "Name", "Value" : "AWS-LLAPP-LVDDB-AUIM01"},
+                   {"Key" : "scheduler:ebs-snapshot", "Value" : "none" }
+        ],
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "AuditDatabaseSecurityGroup" }],
+          "AssociatePublicIpAddress" : "false",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-DevDBSubnetID" } }
+        }],
+		"BlockDeviceMappings" : [
+		   {
+			  "DeviceName" : "/dev/sda1",
+			  "Ebs" : {
+                  "VolumeSize" : "10",
+                  "VolumeType" : "gp2",
+                  "DeleteOnTermination" : true
+              }
+		   },
+           {
+              "DeviceName" : "/dev/sdb",
+              "Ebs" : {
+                  "VolumeSize" : {"Fn::If" : ["FullSizeVolumes","4000","50"]},
+                  "VolumeType" : "gp2",
+                  "Encrypted" : true,
+                  "DeleteOnTermination" : true
+              }
+           }
+		],
+		"UserData" : {"Fn::Base64" : { "Fn::Join" : ["",[
+
+				"#!/bin/bash","\n",
+                "hostnamectl set-hostname AWS-LLAPP-LVDDB-AUIM01 --static","\n",
+                "systemctl start amazon-ssm-agent",
+                "systemctl enable amazon-ssm-agent.service"
+
+			]]}
+		}
+      }
+    },
+
+    "DatawareHouseInstancesRole" : {
+     "Metadata" : {
+        "Comment1" : "//------------------------------DatawareHouse Database Server---------------------------------"
+      },
+      "Type"  : "AWS::IAM::Role",
+      "Properties" : {
+          "AssumeRolePolicyDocument" : {
+              "Statement" : [ {
+                  "Effect" : "Allow",
+                  "Principal" : {
+                      "Service" : [ "ec2.amazonaws.com" ]
+                  },
+                  "Action" : [ "sts:AssumeRole" ]
+              } ]
+          },
+          "Policies": [ {
+               "PolicyName": "LLDEC2CloudWatch",
+               "PolicyDocument": {
+                  "Version" : "2012-10-17",
+                  "Statement": [ {
+                     "Effect": "Allow",
+                     "Action": ["cloudwatch:PutMetricData","cloudwatch:GetMetricStatistics","cloudwatch:ListMetrics","ec2:DescribeTags"],
+                     "Resource": "*"
+                  } ]
+               }
+               }
+          ],
+          "ManagedPolicyArns" : ["arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM",
+                                "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
+          "Path" : "/service-role/"
+      }
+    },
+
+    "DatawareHouseInstanceProfile" : {
+      "Type" : "AWS::IAM::InstanceProfile",
+      "Properties" : {
+        "Path" : "/",
+        "Roles" : [ { "Ref" : "DatawareHouseInstancesRole" } ]
+      }
+    },
+
+    "DatawareHouseSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for DatawareHouse instances",
+        "VpcId" : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-VPCID" } },
+        "SecurityGroupIngress" : [
+          						   { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" },
+          						   { "IpProtocol" : "tcp", "FromPort" : "443",  "ToPort" : "443",  "CidrIp" : "0.0.0.0/0" } ,
+          						   { "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" } ,
+                                   { "IpProtocol" : "tcp", "FromPort" : "50000",  "ToPort" : "50000",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+
+        ],
+        "SecurityGroupEgress" : [
+           						   { "IpProtocol" : "tcp", "FromPort" : "0",  "ToPort" : "65535",  "CidrIp" : "0.0.0.0/0" },
+           						   { "IpProtocol" : "icmp", "FromPort" : "8", "ToPort" : "-1", "CidrIp" : "0.0.0.0/0" }
+        ],
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "DWDM" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+        		   {"Key" : "Name", "Value" : { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "_DatawareHouseSecurityGroup"]]}}
+
+        ]
+      }
+    },
+
+    "DatawareHouseServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : { "Ref" : "BaseAMI" },
+        "InstanceType" : { "Ref" : "DatawareHouseInstanceType" },
+        "KeyName" : { "Ref" : "KeyName" },
+        "IamInstanceProfile" : { "Ref" : "DatawareHouseInstanceProfile" },
+        "Tags" : [
+                   {"Key" : "ApplicationID", "Value" : "LLAPP" },
+                   {"Key" : "ApplicationRole", "Value" : "DWDM" },
+                   {"Key" : "Environment", "Value" : "DEV" },
+                   {"Key" : "Stack", "Value" : { "Ref" : "AWS::StackName"} },
+                   {"Key" : "Name", "Value" : "AWS-LLAPP-LVDDB-DWDM01"},
+                   {"Key" : "scheduler:ebs-snapshot", "Value" : "none" }
+        ],
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "DatawareHouseSecurityGroup" }],
+          "AssociatePublicIpAddress" : "false",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-DevDBSubnetID" } }
+        }],
+		"BlockDeviceMappings" : [
+		   {
+			  "DeviceName" : "/dev/sda1",
+			  "Ebs" : {
+                  "VolumeSize" : "10",
+                  "VolumeType" : "gp2",
+                  "DeleteOnTermination" : true
+              }
+		   },
+           {
+              "DeviceName" : "/dev/sdb",
+              "Ebs" : {
+                  "VolumeSize" : {"Fn::If" : ["FullSizeVolumes","7200","50"]},
+                  "VolumeType" : "gp2",
+                  "Encrypted" : true,
+                  "DeleteOnTermination" : true
+              }
+           }
+		],
+		"UserData" : {"Fn::Base64" : { "Fn::Join" : ["",[
+
+				"#!/bin/bash","\n",
+                "hostnamectl set-hostname AWS-LLAPP-LVDDB-DWDM01 --static","\n",
+                "systemctl start amazon-ssm-agent","\n",
+                "systemctl enable amazon-ssm-agent.service"
+
+			]]}
+		}
+      }
+    },
+
+	"PrivateDNSRecords" : {
+       "Metadata" : {
+          "Comment1" : "//-------------------------------------DNS records----------------------------------"
+        },
+		"Type" : "AWS::Route53::RecordSetGroup",
+		"Properties" : {
+			"HostedZoneId" : { "Fn::ImportValue" : {"Fn::Sub": "${ManagementStackName}-HostedZone" } },
+			"Comment" : "DNS records for Dev",
+			"RecordSets" : [
+				{
+					"Name" : {"Fn::Join" : [ "", ["devweblogic.",{"Ref" : "LocalDomain"}] ]},
+					"Type" : "A",
+					"TTL" : "900",
+					"ResourceRecords" : [{ "Fn::GetAtt" : ["WebLogicServer", "PrivateIp"] }]
+                },
+                {
+					"Name" : {"Fn::Join" : [ "", ["devweblogicalb.",{"Ref" : "LocalDomain"}] ]},
+					"Type" : "A",
+					"AliasTarget" : {
+						"HostedZoneId" : { "Fn::GetAtt" : ["DevWLAppLoadBalancer", "CanonicalHostedZoneID"] },
+						"DNSName" : { "Fn::GetAtt" : ["DevWLAppLoadBalancer","DNSName"] }
+					}
+                },
+                {
+					"Name" : {"Fn::Join" : [ "", ["devsapbo.",{"Ref" : "LocalDomain"}] ]},
+					"Type" : "A",
+					"TTL" : "900",
+					"ResourceRecords" : [{ "Fn::GetAtt" : ["SAPBOServer", "PrivateIp"] }]
+                },
+                {
+					"Name" : {"Fn::Join" : [ "", ["devsapetl.",{"Ref" : "LocalDomain"}] ]},
+					"Type" : "A",
+					"TTL" : "900",
+					"ResourceRecords" : [{ "Fn::GetAtt" : ["SAPETLServer", "PrivateIp"] }]
+                },
+                {
+					"Name" : {"Fn::Join" : [ "", ["devftp.",{"Ref" : "LocalDomain"}] ]},
+					"Type" : "A",
+					"TTL" : "900",
+					"ResourceRecords" : [{ "Fn::GetAtt" : ["FTPServer", "PrivateIp"] }]
+                },
+                {
+					"Name" : {"Fn::Join" : [ "", ["devbatch.",{"Ref" : "LocalDomain"}] ]},
+					"Type" : "A",
+					"TTL" : "900",
+					"ResourceRecords" : [{ "Fn::GetAtt" : ["BatchServer", "PrivateIp"] }]
+                },
+                {
+					"Name" : {"Fn::Join" : [ "", ["devappdb.",{"Ref" : "LocalDomain"}] ]},
+					"Type" : "A",
+					"TTL" : "900",
+					"ResourceRecords" : [{ "Fn::GetAtt" : ["AppDatabaseServer", "PrivateIp"] }]
+                },
+                {
+					"Name" : {"Fn::Join" : [ "", ["devauditdb.",{"Ref" : "LocalDomain"}] ]},
+					"Type" : "A",
+					"TTL" : "900",
+					"ResourceRecords" : [{ "Fn::GetAtt" : ["AuditDatabaseServer", "PrivateIp"] }]
+                },
+                {
+					"Name" : {"Fn::Join" : [ "", ["devdatawarehouse.",{"Ref" : "LocalDomain"}] ]},
+					"Type" : "A",
+					"TTL" : "900",
+					"ResourceRecords" : [{ "Fn::GetAtt" : ["DatawareHouseServer", "PrivateIp"] }]
+                }
+			]
+		}
+	}
+  },
+
+  "Outputs" : {
+    "VpcId" : {
+      "Description": "VPC",
+      "Value": { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-VPCID" } },
+      "Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-VPCID" }}
+    },
+    "DevWebLogic":{
+    	"Description" : "Dev WebLogic",
+    	"Value" : {  "Fn::GetAtt" : ["WebLogicServer", "PrivateIp"]  } ,
+    	"Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-WebLogic" }}
+    },
+    "WebLogicInterface":{
+    	"Description" : "Dev WebLogic network interface",
+    	"Value" : { "Ref" : "WebLogicInterface" } ,
+    	"Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-WebLogicNetworkInterface" }}
+    },
+    "DevSAPBO":{
+    	"Description" : "Dev SAP Business Objects",
+        "Value" : {  "Fn::GetAtt" : ["SAPBOServer", "PrivateIp"]  } ,
+    	"Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-SAPBO" }}
+    },
+    "DevSAPETL":{
+    	"Description" : "Dev SAP ETL",
+        "Value" : {  "Fn::GetAtt" : ["SAPETLServer", "PrivateIp"]  } ,
+    	"Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-SAPETL" }}
+    },
+    "DevFTP":{
+    	"Description" : "Dev FTP",
+        "Value" : {  "Fn::GetAtt" : ["FTPServer", "PrivateIp"]  } ,
+    	"Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-FTP" }}
+    },
+    "BatchServer":{
+    	"Description" : "Dev Batch Server",
+        "Value" : {  "Fn::GetAtt" : ["BatchServer", "PrivateIp"]  } ,
+    	"Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-Batch" }}
+    },
+    "AppDatabase":{
+    	"Description" : "Dev AppDatabase",
+        "Value" : {  "Fn::GetAtt" : ["AppDatabaseServer", "PrivateIp"]  },
+    	"Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-AppDatabase" }}
+    },
+    "AuditDatabase":{
+    	"Description" : "Dev Audit Database",
+        "Value" : {  "Fn::GetAtt" : ["AuditDatabaseServer", "PrivateIp"]  },
+    	"Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-AuditDatabase" }}
+    },
+    "DatawareHouse":{
+    	"Description" : "Dev DatawareHouse",
+        "Value" : {  "Fn::GetAtt" : ["DatawareHouseServer", "PrivateIp"]  },
+    	"Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-DatawareHouse" }}
+    },
+    "DevS3Bucket":{
+    	"Description" : "Dev S3 bucket for file sharing Primary IP",
+    	"Value" : {"Fn::Join" : [ "", ["devfiles.",{"Ref" : "LocalDomain"}] ]} ,
+    	"Export" : { "Name" : {"Fn::Sub": "${AWS::StackName}-DevS3Bucket" }}
+    }
+  }
+}
